@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="controller.css">
+        <script src = "../../src/peer.js"></script>
+        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+
+        
+    </head>
+    <body>
+        <div id="ping" style='float: right;'></div>
+
+       
+        <div class="container">
+            <div class="item-0">  <button id="screenButton" onclick="switchScreen()" style = "background: rgb(66, 64, 64); padding:2px; margin:2px; border: none;">  <img id="screenPic" src="images/open.png"  width="25" height="25"> </button></div>
+            <div class="rcorners item-a"></div>
+            <div class="rcorners item-b"></div>
+            <div class="rcorners item-c"><p> SELECT START</p></div>
+            <div class="rcorners1 item-d"> 
+                <button id="select" class="rectangle-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"></button> 
+                <button id="start" class="rectangle-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"></button>
+            </div>
+
+            <div class="rcorners item-e"></div>
+
+            <div class="square item-f"><button id="up" class="square-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"><img src="images/up.png" width="30px" height= "30px" style="pointer-events: none"></button></div>
+            <div class="square item-g"><button id="left" class="square-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"><img src="images/left.png" width="30px" height= "30px" style="pointer-events: none"></button></div>
+            <div class="square item-h"></div>
+            <div class="square item-i"><button id="right" class="square-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"><img src="images/right.png" width="30px" height= "30px" style="pointer-events: none"></button></div>
+            <div class="square item-j"><button id="down" class="square-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"><img src="images/down.png" width="30px" height= "30px" style= "pointer-events: none"></button></div>
+
+            <div class="square1 item-k"> <button id="b" class="round-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)" ></button> </div>
+            <div class="square1 item-l"> <button id="a" class="round-button" ontouchstart="press(event, this.id)" ontouchend="release(event, this.id)"></button></div>
+
+            <div class="item-m"> <p style = "margin: 0px"> B </p></div>
+            <div class="item-n"> <p style = "margin: 0px"> A </p></div>
+
+          </div>
+          
+        
+        <script>
+            peerInitialize();
+
+            function press(event, id){
+                event.preventDefault();
+                conn.send(["s", id]);
+            }
+
+            function release(event, id){
+                event.preventDefault();
+                conn.send(["r", id]);
+            }
+
+            /* Get the documentElement (<html>) to display the page in fullscreen */
+            var elem = document.documentElement;
+
+            /* View in fullscreen */
+            function openFullscreen() {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+            }
+
+            /* Close fullscreen */
+            function closeFullscreen() {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { /* IE11 */
+                document.msExitFullscreen();
+            }
+            }
+
+            var img_array= new Array('images/open.png','images/close.png');
+            var full_screen = false;
+            function switchScreen()
+            {
+                if (full_screen){
+                    document.getElementById("screenPic").src=img_array[0];
+                    closeFullscreen();
+                    full_screen = false;
+                }
+                else{
+                    document.getElementById("screenPic").src=img_array[1];
+                    openFullscreen();
+                    full_screen = true;
+
+                }
+                
+            }
+        </script>
+    </body>
+</html>
