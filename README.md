@@ -1,4 +1,4 @@
-# WebRTC Smartphone Controller
+# Phone Control v2.
 
 ## Table of contents ##
   * [How it works](#how-it-works)
@@ -70,4 +70,4 @@ Try the [hand tracking](https://JeherillaJanwar.github.io/phoneControlv2/handtra
 ---
 
 
-Made by Ishaan Sharma
+[Made by Ishaan Sharma](https://cutt.ly/328069i)
