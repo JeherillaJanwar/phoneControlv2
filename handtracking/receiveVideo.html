@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width">
+
+        <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+
+        <script src="https://unpkg.com/@tensorflow/tfjs-core@2.1.0/dist/tf-core.js"></script>
+        <script src="https://unpkg.com/@tensorflow/tfjs-converter@2.1.0/dist/tf-converter.js"></script>
+
+        <!-- You must explicitly require a TF.js backend if you're not using the tfs union bundle. -->
+        <script src="https://unpkg.com/@tensorflow/tfjs-backend-webgl@2.1.0/dist/tf-backend-webgl.js"></script>
+        <!-- Alternatively you can use the WASM backend: <script src="https://unpkg.com/@tensorflow/tfjs-backend-wasm@2.1.0/dist/tf-backend-wasm.js"></script> -->
+
+        <script src="https://unpkg.com/@tensorflow-models/handpose@0.0.6/dist/handpose.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+
+        <link rel="stylesheet" href="../touchpad/style.css">
+
+    </head>
+    <body>
+        
+        <table class="display">
+            <tr>
+                <td class="title">Status:</td>
+
+            </tr>
+            <td>
+                <div id="receiver-id" style="font-weight: bold;" title="Copy this ID to the input on send.html.">ID:</div>
+                </td>
+                
+      
+            <tr>
+                <td><div id="status" class="status"></div></td>
+                <div id="stats" style='float: right;'></div>
+            </tr>
+
+            <tr>
+                <td>
+                    <canvas id="myCanvas"  style="border:1px solid #000000;"></canvas>
+                </td>
+                <td>
+                    <div id="canvas-wrapper">
+                        <canvas id="output" ></canvas>
+                        <video id="video" playsinline style="
+                        -webkit-transform: scaleX(-1);
+                        transform: scaleX(-1);
+                        visibility: hidden;
+                        width: auto;
+                        height: auto;
+                        position: absolute;
+                        ">
+                        </video>
+                      </div>
+            
+                </td>
+            </tr>
+            
+        </table>
+
+        <center> 
+        <div id="qrbox" class="modal">
+
+            <div class="modal-content">
+                <p> Scan the qr code to connect your device.</p>
+                <div id="qrcode"></div>
+            </div>
+          </div>
+        </center>
+
+        
+          
+
+        
+       
+          <div id="scatter-gl-container"></div>
+
+       
+
+
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.6/dat.gui.min.js"></script> 
+        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+        <script type="text/javascript">
+            
+
+                var lastPeerId = null;
+                var peer = null; // Own peer object
+                var peerId = null;
+                var conn = null;
+                var recvId = document.getElementById("receiver-id");
+                var status = document.getElementById("status");
+                var message = document.getElementById("message");
+                var fps = document.getElementById("framesPerSecond");
+                
+                var popupBox = document.getElementById("qrbox");
+                var span = document.getElementsByClassName("close")[0];
+                                
+                const videoElement = document.getElementById('video');
+                var canvas1=document.getElementById("myCanvas");
+                canvas1.setAttribute('width', 1000);
+                canvas1.setAttribute('height', 500);
+                ctx1 = canvas1.getContext("2d");
+
+                var stats = new Stats();
+                stats.showPanel(0);
+                document.getElementById('stats').appendChild(stats.domElement)
+
+                var video = videoElement;
+    
+                var scaleX = 0, 
+                    scaleY = 0;               
+
+                var targetX = 10,
+                targetY = 10;
+ 
+
+                //let model; 
+
+                function update(){
+                    
+                        ctx1.clearRect(0,0,canvas1.width,canvas1.height);
+                        ctx1.beginPath();
+                        ctx1.arc(targetX, targetY,20,0,Math.PI*2);
+                        ctx1.fill();
+                  
+                }
+
+                              
+
+                var widthV = 1280;
+                var heightV = 720;
+
+
+                /**
+                 * Create the Peer object for our end of the connection.
+                 *
+                 * Sets up callbacks that handle any events related to our
+                 * peer object.
+                 */
+                 function initialize() {
+                    // Create own peer object with connection to shared PeerJS server
+                    peer = new Peer({
+                            secure: true,
+                            host: "smartcontrollerserver.herokuapp.com", // change here the herokuapp name
+                            port: 443,
+                        });
+
+                    peer.on('open', function (id) {
+                        // Workaround for peer.reconnect deleting previous id
+                        if (peer.id === null) {
+                            console.log('Received null id from peer open');
+                            peer.id = lastPeerId;
+                        } else {
+                            lastPeerId = peer.id;
+                        }
+
+                        console.log('ID: ' + peer.id);
+                        recvId.innerHTML = "ID: " + peer.id;
+                        status.innerHTML = "Awaiting connection...";
+                        new QRCode(document.getElementById("qrcode"), "https://JeherillaJanwar.github.io/WebRTCSmartphoneController/handtracking/sendVideo.html?id=" + peer.id);
+                        popupBox.style.display = "block";
+                    });
+                    peer.on('connection', function (c) {
+                        // Allow only a single connection
+                        if (conn && conn.open) {
+                            c.on('open', function() {
+                                c.send("Already connected to another client");
+                                setTimeout(function() { c.close(); }, 500);
+                            });
+                            return;
+                        }
+
+                        conn = c;
+                        console.log("Connected to: " + conn.peer);
+                        status.innerHTML = "Connected";
+                        popupBox.style.display = "none";
+                        ready();
+
+                        var getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                        peer.on('call', function(call) {
+                        getUserMedia({video: false, audio: true}, function() {
+                            call.answer(); // Answer the call with an A/V stream.
+                            call.on('stream', function(remoteStream) {
+                                setRemoteStream(remoteStream)
+                            });
+                        });
+                });
+                    });
+                    peer.on('disconnected', function () {
+                        status.innerHTML = "Connection lost. Please reconnect";
+                        console.log('Connection lost. Please reconnect');
+
+                        // Workaround for peer.reconnect deleting previous id
+                        peer.id = lastPeerId;
+                        peer._lastServerId = lastPeerId;
+                        peer.reconnect();
+                    });
+                    peer.on('close', function() {
+                        conn = null;
+                        status.innerHTML = "Connection destroyed. Please refresh";
+                        console.log('Connection destroyed');
+                    });
+                    peer.on('error', function (err) {
+                        console.log(err);
+                        alert('' + err);
+                    });
+                };
+
+
+                function setRemoteStream(stream){
+                    //var video = videoElement;
+                    video.srcObject = stream;
+
+                    video.addEventListener("loadedmetadata", function () {
+                        scaleX = this.videoWidth; 
+                        scaleY = this.videoHeight;
+                        video.play();                        
+                        main1();
+                    });
+                    
+                    
+                    } 
+
+                /**
+                 * Triggered once a connection has been achieved.
+                 * Defines callbacks to handle incoming data and connection events.
+                 */
+                function ready() {
+                    conn.on('data', function (data) {
+                        console.log("Data recieved");
+                                                   
+                    });
+                    conn.on('close', function () {
+                        status.innerHTML = "Connection reset<br>Awaiting connection...";
+                        conn = null;
+                    });
+                }
+
+                var frames = 0;
+                var prevTime = new Date();
+                prevTime = prevTime.getTime();
+
+                function framePerSecond(currentTime){
+                    //console.log((currentTime - prevTime)/1000);
+                    if ((currentTime - prevTime)/1000 < 1){
+                        frames += 1;
+                    }
+                    else {
+                        fps.innerHTML = frames;
+                        frames = 1;
+                        prevTime = currentTime;
+                        
+                    }
+                    
+                }
+                
+
+                initialize();
+
+                
+ 
+   
+            let videoWidth, videoHeight, rafID, ctx, canvas, ANCHOR_POINTS,
+                scatterGLHasInitialized = false, scatterGL, fingerLookupIndices = {
+                thumb: [0, 1, 2, 3, 4],
+                indexFinger: [0, 5, 6, 7, 8],
+                middleFinger: [0, 9, 10, 11, 12],
+                ringFinger: [0, 13, 14, 15, 16],
+                pinky: [0, 17, 18, 19, 20]
+                };  // for rendering each finger as a polyline
+            
+            const VIDEO_WIDTH = 640;
+            const VIDEO_HEIGHT = 500;
+            
+            // Don't render the point cloud on mobile in order to maximize performance and
+            // to avoid crowding limited screen space.
+            
+            
+            const state = {
+            backend: 'webgl'
+            };
+            
+            
+            function drawPoint(y, x, r) {
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, 2 * Math.PI);
+            ctx.fill();
+            }
+            
+            function drawKeypoints(keypoints) {
+            const keypointsArray = keypoints;
+            
+            for (let i = 0; i < keypointsArray.length; i++) {
+                const y = keypointsArray[i][0];
+                const x = keypointsArray[i][1];
+                drawPoint(x - 2, y - 2, 3);
+            }
+            
+            const fingers = Object.keys(fingerLookupIndices);
+            for (let i = 0; i < fingers.length; i++) {
+                const finger = fingers[i];
+                const points = fingerLookupIndices[finger].map(idx => keypoints[idx]);
+                drawPath(points, false);
+            }
+            }
+            
+            function drawPath(points, closePath) {
+            const region = new Path2D();
+            region.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                const point = points[i];
+                region.lineTo(point[0], point[1]);
+            }
+            
+            if (closePath) {
+                region.closePath();
+            }
+            ctx.stroke(region);
+            }
+            
+            let model;
+            
+            
+            async function addFlagLabels() {
+            if(!document.querySelector("#simd_supported")) {
+                const simdSupportLabel = document.createElement("div");
+                simdSupportLabel.id = "simd_supported";
+                simdSupportLabel.style = "font-weight: bold";
+                const simdSupported = await tf.env().getAsync('WASM_HAS_SIMD_SUPPORT');
+                simdSupportLabel.innerHTML = `SIMD supported: <span class=${simdSupported}>${simdSupported}<span>`;
+                document.querySelector("#info").appendChild(simdSupportLabel);
+            }
+            
+            if(!document.querySelector("#threads_supported")) {
+                const threadSupportLabel = document.createElement("div");
+                threadSupportLabel.id = "threads_supported";
+                threadSupportLabel.style = "font-weight: bold";
+                const threadsSupported = await tf.env().getAsync('WASM_HAS_MULTITHREAD_SUPPORT');
+                threadSupportLabel.innerHTML = `Threads supported: <span class=${threadsSupported}>${threadsSupported}</span>`;
+                document.querySelector("#info").appendChild(threadSupportLabel);
+            }
+            }
+            async function main1() {
+            await tf.setBackend(state.backend);
+            if (!tf.env().getAsync('WASM_HAS_SIMD_SUPPORT') && state.backend == "wasm") {
+                console.warn("The backend is set to WebAssembly and SIMD support is turned off.\nThis could bottleneck your performance greatly, thus to prevent this enable SIMD Support in chrome://flags");
+            }
+            model = await handpose.load();
+            
+          
+            videoWidth = video.videoWidth;
+            videoHeight = video.videoHeight;
+            
+            canvas = document.getElementById('output');
+            canvas.width = videoWidth;
+            canvas.height = videoHeight;
+            video.width = videoWidth;
+            video.height = videoHeight;
+            
+            ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, videoWidth, videoHeight);
+            ctx.strokeStyle = 'red';
+            ctx.fillStyle = 'red';
+            
+            ctx.translate(canvas.width, 0);
+            ctx.scale(-1, 1);
+            
+            // These anchor points allow the hand pointcloud to resize according to its
+            // position in the input.
+            ANCHOR_POINTS = [
+                [0, 0, 0], [0, -VIDEO_HEIGHT, 0], [-VIDEO_WIDTH, 0, 0],
+                [-VIDEO_WIDTH, -VIDEO_HEIGHT, 0]
+            ];
+            
+  
+            
+            landmarksRealTime(video);
+            }
+            
+            const landmarksRealTime = async (video) => {
+            async function frameLandmarks() {
+                stats.begin();
+                ctx.drawImage(
+                    video, 0, 0, videoWidth, videoHeight, 0, 0, canvas.width,
+                    canvas.height);
+                const predictions = await model.estimateHands(video);
+                if (predictions.length > 0) {
+                    const results = predictions[0].annotations; 
+                            console.log(results["indexFinger"][0][0]);
+                            var resultX = (results["indexFinger"][0][0] / scaleX) * canvas1.width;
+                            var resultY = (results["indexFinger"][0][1] / scaleY) * canvas1.height; 
+                            targetX = canvas1.width - Math.round(resultX);
+                            targetY = Math.round(resultY);
+                            update(); 
+                            
+                    const result = predictions[0].landmarks;
+                    drawKeypoints(result, predictions[0].annotations);
+            
+               
+            
+                                     
+            
+                    const fingers = Object.keys(fingerLookupIndices);
+                    stats.end();
+       
+                }
+                
+                
+                rafID = requestAnimationFrame(frameLandmarks);
+            };
+            
+            frameLandmarks();
+            };
+            
+
+            
+           // main();
+        </script>
+    </body>
+</html>
