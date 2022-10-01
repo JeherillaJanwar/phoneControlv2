@@ -45,10 +45,12 @@ After opening the QRcode URL you are ready to use your smartphone as a controlle
 ### Tiny Platformer ###
 Tiny platformer game with NES controller. Collect the gold coins and jump on the enemies to beat the level. <br />
 Try the [tiny platformer](https://emmapoliakova.github.io/WebRTCSmartphoneController/demo/tinyPlatformer/index.html)
+[<img src="media/platform-b.gif" width="1000" />](https://JeherillaJanwar.github.io/WebRTCSmartphoneController/demo/tinyPlatformer/index.html)
 
 ### 3D racing ###
 3D racing game controlled with phone joystick. Use the joystick to steer, brake and jump. How many points can you score before the time runs out? <br />
 Try the [3D Racer](https://emmapoliakova.github.io/WebRTCSmartphoneController/demo/3dRacing.html)
+[<img src="media/racing.gif" width="1050" />](https://JeherillaJanwar.github.io/WebRTCSmartphoneController/demo/3dRacing.html)
 
 ### Physics simulator ###
 A physics simulator created with Matterjs. Use the touchpad to select and stack blocks. <br />
@@ -57,6 +59,8 @@ Try the [physics simulator](https://emmapoliakova.github.io/WebRTCSmartphoneCont
 ### Multiplayer Physics simulator ###
 Multiplayer tower building. This demo requires two people to connect. Both players will need to cooperate by selecting the same block to be able to carry it. <br />
 Try the [cooperative physics simulator](https://JeherillaJanwar.github.io/WebRTCSmartphoneController/physics/physicsDemoV4.html)
+[<img src="media/physics-b.gif" width="1000" />](https://emmapoliakova.github.io/WebRTCSmartphoneController/physics/physicsDemoV3.html)
+
 
 ### Handtracking ###
 This demo lets you stream a video into browers that will track your hand to control the dot.<br />
