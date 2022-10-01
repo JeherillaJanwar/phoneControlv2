@@ -55,11 +55,13 @@ Try the [3D Racer](https://JeherillaJanwar.github.io/phoneControlv2/demo/3dRacin
 ### Physics simulator ###
 A physics simulator created with Matterjs. Use the touchpad to select and stack blocks. <br />
 Try the [physics simulator](https://JeherillaJanwar.github.io/phoneControlv2/physics/physicsDemoV3.html)
+[<img src="media/physics-b.gif" width="1000" />](https://JeherillaJanwar.github.io/phoneControlv2/physics/physicsDemoV3.html)
 
 ### Multiplayer Physics simulator ###
 Multiplayer tower building. This demo requires two people to connect. Both players will need to cooperate by selecting the same block to be able to carry it. <br />
 Try the [cooperative physics simulator](https://JeherillaJanwar.github.io/phoneControlv2/physics/physicsDemoV4.html)
-[<img src="media/physics-b.gif" width="1000" />](https://JeherillaJanwar.github.io/phoneControlv2/physics/physicsDemoV3.html)
+[<img src="media/physics2-b.gif" width="1000" />](https://JeherillaJanwar.github.io/phoneControlv2/physics/physicsDemoV4.html)
+
 
 
 ### Handtracking ###
