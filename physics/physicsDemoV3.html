@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.17.1/matter.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/stats.js/r16/Stats.min.js"></script>
+        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+        <script src = "../src/connectionManager.js"> </script>
+
+    </head>
+    <body>
+
+                
+                <!-- <div id="stats" style='float: right;'></div> -->
+
+        <center>
+            <div id="qrbox" class="modal">
+    
+                <div class="modal-content">
+                    <p> Scan the qr code to connect your device.</p>
+                    <div id="qrcode"></div>
+                
+                </div>
+              
+              </div>
+            </center>
+
+            
+                <canvas id="layer1" width="800" height="600" 
+                  style="position: absolute; left: 0; top: 0; z-index: 0; background-color: rgba(255, 255, 255, 0);"></canvas>
+                <canvas id="layer2" width="800" height="600" 
+                  style="position: absolute; left: 0; top: 0; z-index: 1; background-color: rgba(255, 255, 255, 0);"></canvas>
+                
+                
+              
+            
+
+        <script type="text/javascript">            
+            
+
+            //pup up window with QR
+            var popupBox = document.getElementById("qrbox");
+            var span = document.getElementsByClassName("close")[0];
+            var qrcode = document.getElementById("qrcode");
+
+            var canvas1 = document.getElementById("layer1");
+            var ctx1 = canvas1.getContext('2d');
+            ctx1.fillStyle = "red";
+
+
+            function drawPointer(coordinates){
+                ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+                ctx1.beginPath();
+                ctx1.arc(coordinates[0][0]*canvas1.width,coordinates[0][1]*canvas1.height,5,0,Math.PI*2);
+                ctx1.fill();
+
+                if (selectedBody != null){
+                    ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+                }
+            }
+
+            //matter.js section
+            var offset = null;
+            var selectedBody = null;
+            var coordinates = null;
+
+            var Engine = Matter.Engine,
+            Render = Matter.Render,
+            Runner = Matter.Runner,
+            Body = Matter.Body,
+            Events = Matter.Events,
+            Composite = Matter.Composite,
+            Bodies = Matter.Bodies;
+
+            // var stats = new Stats();
+			// stats.showPanel(0);
+			// document.getElementById('stats').appendChild(stats.domElement)
+
+            // create engine
+            var engine = Engine.create(),
+                world = engine.world;
+
+            // create renderer
+            var render = Render.create({
+                element: document.body,
+                engine: engine,
+                options: {
+                    width: 800,
+                    height: 600,
+                    wireframes: false,
+                    background: '#e7e4f4',  
+                    showAxes: true,
+                    showCollisions: true,
+                    showConvexHulls: true
+                }
+            });
+
+            Render.run(render);
+
+            var runner = Runner.create();
+            Runner.run(runner, engine);
+
+            var allBodies = [];
+            // add bodies
+            for (var i=0; i<5; i++){
+                var x = 300+i*50;
+                var y = 300+i*50;
+                var w = 50+i*10;
+                var h = 50+i*10;
+                var body = Bodies.rectangle(x, y, w, h, { friction: 1, render: { fillStyle: '#060a19' } });
+                Composite.add(world, [body]);
+                allBodies.push([[body.position.x,body.position.y],body]);
+
+            }
+
+
+            Composite.add(world, [
+            // walls
+            Bodies.rectangle(400, 0, 800, 50, { isStatic: true }),
+            Bodies.rectangle(400, 600, 800, 50, { isStatic: true }),
+            Bodies.rectangle(800, 300, 50, 600, { isStatic: true }),
+            Bodies.rectangle(0, 300, 50, 600, { isStatic: true })
+            ]);
+
+
+
+        
+            
+            
+
+             //Create the Peer object for our end of the connection + listeners.
+             
+                managerInitialize("https://JeherillaJanwar.github.io/WebRTCSmartphoneController/physics/sendScreenPhysicsV2.html" ,qrcode, popupBox);
+                
+
+                el.addEventListener('open', function(e){
+                    popupBox.style.display = "none";
+                    setPositions();
+                    processCoordinates();
+                });
+                            
+                el.addEventListener('data', function(e){
+                    var data = e.detail;
+                    var player = data[0];
+                   
+                   switch(data[1][0]) {
+                       case "start":
+                           findClosest(data[1][1], player);
+                           drawPointer(data[1][1]);
+                           coordinates = data[1][1];
+                          
+                           break;
+                       case "move": 
+                            coordinates = data[1][1];
+                           if (selectedBody == null){
+                            findClosest(data[1][1], player);
+                            drawPointer(data[1][1]);
+                           }
+                             
+                           break;
+                       case "end":
+                           ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+                           if (selectedBody!= null){
+ 
+                               setPositions();
+                               selectedBody.render.fillStyle = '#060a19';
+                               selectedBody = null;
+                           }
+                           break; 
+                   }             
+                });
+
+
+                el.addEventListener('close', function(e){
+                    popupBox.style.display = "block";
+                });
+               
+
+
+                //functions to handle 
+                function setPositions(){
+                    for (var i = 0; i<allBodies.length; i++){
+                        var body = allBodies[i][1];
+                        allBodies[i][0] = [body.position.x,body.position.y];
+                    }
+                }
+                
+                function findClosest(coordinates, player){
+                    for (var val of allBodies){
+                        
+                        if (Matter.Vertices.contains(val[1].vertices, { x: coordinates[0][0]*800, y: coordinates[0][1]*600})){
+                            offset = [val[1].position.x- coordinates[0][0]*800, val[1].position.y-coordinates[0][1]*600]
+                            selectedBody = val[1];
+                            selectedBody.render.fillStyle = 'red';
+                            ctx1.clearRect(0, 0, canvas1.width, canvas1.height);
+
+
+                        }
+                    }
+
+
+                }
+
+                function processCoordinates() {
+                    
+                    if (selectedBody != null){
+                        Body.setPosition(selectedBody, { x: Math.round(coordinates[0][0]*800 + offset[0]), y: Math.round(coordinates[0][1]*600 + offset[1])});
+                    }
+                    requestAnimationFrame(processCoordinates);
+                }
+
+
+
+    
+                
+
+        </script>
+    </body>
+</html>
