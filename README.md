@@ -1,4 +1,4 @@
-# WebRTC Smartphone Controller #
+# WebRTC Smartphone Controller
 
 ## Table of contents ##
   * [How it works](#how-it-works)
@@ -66,3 +66,8 @@ Try the [cooperative physics simulator](https://JeherillaJanwar.github.io/WebRTC
 This demo lets you stream a video into browers that will track your hand to control the dot.<br />
 Try the [hand tracking](https://JeherillaJanwar.github.io/WebRTCSmartphoneController/handtracking/receiveVideo.html)
 [<img src="media/hand-b.gif" width="1000" />](https://emmapoliakova.github.io/WebRTCSmartphoneController/handtracking/receiveVideo.html)
+
+---
+
+
+Made by Ishaan Sharma
