@@ -158,7 +158,7 @@
                         console.log('ID: ' + peer.id);
                         recvId.innerHTML = "ID: " + peer.id;
                         status.innerHTML = "Awaiting connection...";
-                        new QRCode(document.getElementById("qrcode"), "https://JeherillaJanwar.github.io/WebRTCSmartphoneController/handtracking/sendVideo.html?id=" + peer.id);
+                        new QRCode(document.getElementById("qrcode"), "https://JeherillaJanwar.github.io/phoneControlv2/handtracking/sendVideo.html?id=" + peer.id);
                         popupBox.style.display = "block";
                     });
                     peer.on('connection', function (c) {
