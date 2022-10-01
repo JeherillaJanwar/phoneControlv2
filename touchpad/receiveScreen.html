@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="style.css">
+        <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/kalmanjs@1.1.0/lib/kalman.min.js"></script>
+        
+
+    </head>
+    <body>
+
+                <td class="title">Status:</td>
+                <div id="receiver-id" style="font-weight: bold;" title="Copy this ID to the input on send.html.">ID:</div>
+                <div id="status" class="status"></div>
+                <div id="framesPerSecond" class="fps"></div>
+
+
+        <center>
+            <div id="qrbox" class="modal">
+    
+                <div class="modal-content">
+                    <p> Scan the qr code to connect your device.</p>
+                    <div id="qrcode"></div>
+                
+                </div>
+              
+              </div>
+            </center>
+
+        <canvas id="animationCanvas"  style="border:1px solid #000000;"></canvas>
+
+
+
+            
+        <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+        <script type="text/javascript">
+
+            // ball canvas
+            var canvas=document.getElementById("animationCanvas"),
+            ctx = canvas.getContext("2d");
+            canvas.setAttribute('width', window.innerWidth);
+            canvas.setAttribute('height', window.innerHeight);
+            
+
+            //pup up window with QR
+            var popupBox = document.getElementById("qrbox");
+            var span = document.getElementsByClassName("close")[0];
+
+            var colours = ["green", "blue", "red", "yellow", "orange"];
+            var fingers = 0;
+
+            //ball settings
+            var targetX = [10,10,10,10,10],
+                targetY = [10,10,10,10,10],
+                x = [0,0,0,0,0],
+                y = [0,0,0,0,0],
+                velX = [0,0,0,0,0],
+                velY = [0,0,0,0,0],
+                speed = 10;
+
+            // count frames variables
+            var frames = 0;
+            var prevTime = new Date();
+            prevTime = prevTime.getTime(); 
+            
+            // peer variables
+            var lastPeerId = null;
+            var peer = null; // Own peer object
+            var peerId = null;
+            var conn = null;
+
+            var recvId = document.getElementById("receiver-id");
+            var status = document.getElementById("status");
+
+            var fps = document.getElementById("framesPerSecond");
+
+            //kalman filter 
+            var kalmanFilter = new KalmanFilter({R: 0.01, Q: canvas.width/2});
+            var kalmanFilter1 = new KalmanFilter({R: 0.01, Q: canvas.height/2});
+
+
+            // ball animation
+            function update(){
+
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+
+                for (var j = 0; j<fingers; j++){
+                    if(Math.abs(targetX[j] - x[j]) > 2 && Math.abs(targetY[j] - y[j]) > 2){
+                        var tx = targetX[j] - x[j],
+                            ty = targetY[j] - y[j],
+                            dist = Math.sqrt(tx*tx+ty*ty);
+
+                            velX[j] = Math.round((tx/dist)*speed),
+                            velY[j] = Math.round((ty/dist)*speed);
+
+                            x[j] += velX[j];
+                            y[j] += velY[j];
+                            
+                    }
+
+                        
+                        ctx.beginPath();
+                        ctx.fillStyle = colours[j];
+                        ctx.arc(x[j],y[j],20,0,Math.PI*2);
+                        ctx.fill();
+                }
+
+
+                setTimeout(update,10);
+            }     
+            
+    
+
+
+             //Create the Peer object for our end of the connection.
+             
+                function initialize() {
+                // Create own peer object with connection to shared PeerJS server
+                peer = new Peer(null, {
+                    debug: 2
+                });
+
+                peer.on('open', function (id) {
+                    // Work-around for peer.reconnect deleting previous id
+                    if (peer.id === null) {
+                        console.log('Received null id from peer open');
+                        peer.id = lastPeerId;
+                    } else {
+                        lastPeerId = peer.id;
+                    }
+
+                    console.log('ID: ' + peer.id);
+                    recvId.innerHTML = "ID: " + peer.id;
+                    status.innerHTML = "Awaiting connection...";
+                    new QRCode(document.getElementById("qrcode"), "https://JeherillaJanwar.github.io/testurl/sendScreen.html?id=" + peer.id);;
+                    popupBox.style.display = "block";
+                });
+
+                peer.on('connection', function (c) {
+                    // Allow only a single connection
+                    if (conn && conn.open) {
+                        c.on('open', function() {
+                            c.send("Already connected to another client");
+                            setTimeout(function() { c.close(); }, 500);
+                        });
+                        return;
+                    }
+
+                    conn = c;
+                    console.log("Connected to: " + conn.peer);
+                    status.innerHTML = "Connected";
+                    popupBox.style.display = "none";
+                    ready();
+                });
+
+                peer.on('disconnected', function () {
+                    status.innerHTML = "Connection lost. Please reconnect";
+                    console.log('Connection lost. Please reconnect');
+
+                    // Work-around for peer.reconnect deleting previous id
+                    peer.id = lastPeerId;
+                    peer._lastServerId = lastPeerId;
+                    peer.reconnect();
+                });
+
+                peer.on('close', function() {
+                    conn = null;
+                    status.innerHTML = "Connection destroyed. Please refresh";
+                    console.log('Connection destroyed');
+                });
+
+                peer.on('error', function (err) {
+                    console.log(err);
+                    alert('' + err);
+                });
+            };
+
+            /**
+             * Triggered once a connection has been achieved.
+             * Defines callbacks to handle incoming data and connection events.
+             */
+            function ready() {
+                conn.on('data', function (data) {               
+                    processCoordinates(data);
+
+                });
+                conn.on('close', function () {
+                    status.innerHTML = "Connection reset<br>Awaiting connection...";
+                    conn = null;
+                });
+            }
+
+                
+                
+                function processCoordinates(msg) {
+            
+                    //ctx.clearRect(0,0,canvas.width,canvas.height);
+                    var coordinates = msg
+                    var currentTime = new Date();  
+                    fingers = coordinates.length;
+
+                    for (var i=0; i < coordinates.length; i++) {
+                        console.log(coordinates[i][0]*canvas.width);
+                        console.log(coordinates[i][1]*canvas.height);
+
+                        console.log(kalmanFilter.filter(coordinates[i][0]*canvas.width));
+                        console.log(kalmanFilter1.filter(coordinates[i][1]*canvas.height));
+
+                        targetX[i] = Math.round(coordinates[i][0]*canvas.width);
+                        targetY[i] = Math.round(coordinates[i][1]*canvas.height);
+
+                        console.log(targetX[i]);
+                        console.log(targetY[i]);
+                        //ctx.beginPath();
+                        //ctx.arc(coordinates[i][0],coordinates[i][1],20,0,Math.PI*2);
+                        //ctx.fillStyle = colours[i];
+                        //ctx.arc(coordinates[i][0]*canvas.width,coordinates[i][1]*canvas.height,20,0,Math.PI*2);
+                        //ctx.fill();
+                    }
+
+                    framePerSecond(currentTime.getTime());
+                }
+
+
+                function framePerSecond(currentTime){
+                    if ((currentTime - prevTime)/1000 < 1){
+                        frames += 1;
+                    }
+                    else {
+                        fps.innerHTML = "FPS: " + frames;
+                        frames = 1;
+                        prevTime = currentTime;
+                        
+                    }
+                    
+                }
+
+                update();
+                initialize();
+                
+
+        </script>
+    </body>
+</html>
